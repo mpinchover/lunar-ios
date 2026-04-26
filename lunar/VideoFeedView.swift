@@ -34,6 +34,7 @@ struct VideoFeedView: View {
             }
         }
         .ignoresSafeArea()
+        .statusBarHidden(true)
         .onAppear { viewModel.playCurrentVideo() }
     }
 
