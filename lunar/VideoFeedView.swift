@@ -81,7 +81,7 @@ struct VideoFeedView: View {
             .onEnded { value in
                 guard !isAnimating else { return }
                 let dy = value.translation.height
-                let threshold = screenHeight / 2
+                let threshold = screenHeight / 3
 
                 if dy < -threshold && viewModel.currentIndex < viewModel.urls.count - 1 {
                     isAnimating = true
