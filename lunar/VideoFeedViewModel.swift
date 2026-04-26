@@ -39,6 +39,10 @@ class VideoFeedViewModel: ObservableObject {
         player(at: currentIndex)?.play()
     }
 
+    func seekToStart(at index: Int) {
+        player(at: index)?.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero)
+    }
+
     private func updateAudio(for center: Int) {
         for (i, item) in playerItems {
             item.player.isMuted = (i == center) ? isMuted : true

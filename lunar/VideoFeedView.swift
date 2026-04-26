@@ -127,6 +127,7 @@ struct VideoFeedView: View {
                         withAnimation(.easeInOut(duration: 0.2)) { showLoginPrompt = true }
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { dragOffset = 0 }
                     } else if viewModel.currentIndex < viewModel.urls.count - 1 {
+                        viewModel.seekToStart(at: viewModel.currentIndex + 1)
                         isAnimating = true
                         withAnimation(.easeInOut(duration: 0.25)) { dragOffset = -screenHeight }
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
@@ -138,6 +139,7 @@ struct VideoFeedView: View {
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { dragOffset = 0 }
                     }
                 } else if dy > threshold && viewModel.currentIndex > 0 {
+                    viewModel.seekToStart(at: viewModel.currentIndex - 1)
                     isAnimating = true
                     withAnimation(.easeInOut(duration: 0.25)) { dragOffset = screenHeight }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
