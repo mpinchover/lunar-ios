@@ -1,21 +1,8 @@
-//
-//  ContentView.swift
-//  lunar
-//
-//  Created by Matt Pinchover on 4/26/26.
-//
-
 import SwiftUI
 
 struct ContentView: View {
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
+        VideoFeedView()
     }
 }
 
