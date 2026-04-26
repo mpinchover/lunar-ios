@@ -1,6 +1,6 @@
 import SwiftUI
 
-private let videoLimit = 5
+private let videoLimit = 20
 
 struct VideoFeedView: View {
     @StateObject private var viewModel = VideoFeedViewModel()
@@ -17,8 +17,17 @@ struct VideoFeedView: View {
         GeometryReader { geo in
             ZStack {
                 Color.black.ignoresSafeArea()
-                videoStack(geo: geo)
-                    .grayscale(isGrayscale ? 1.0 : 0.0)
+
+                if viewModel.urls.isEmpty {
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                        .tint(.white)
+                        .scaleEffect(1.5)
+                } else {
+                    videoStack(geo: geo)
+                        .grayscale(isGrayscale ? 1.0 : 0.0)
+                }
+
                 controls.opacity(showControls ? 1 : 0)
 
                 if showLoginPrompt {
@@ -36,6 +45,13 @@ struct VideoFeedView: View {
         .ignoresSafeArea()
         .statusBarHidden(true)
         .onAppear { viewModel.playCurrentVideo() }
+        .onChange(of: viewModel.isLoadingMore) { _, isLoading in
+            // If new videos arrive while the loading card is visible, snap back
+            // immediately so the freshly added next video doesn't peek into frame.
+            guard !isLoading, dragOffset < 0, isAnimating else { return }
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { dragOffset = 0 }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { isAnimating = false }
+        }
     }
 
     @ViewBuilder
@@ -54,6 +70,16 @@ struct VideoFeedView: View {
                         .offset(y: CGFloat(i - idx) * h + dragOffset)
                 }
             }
+        }
+
+        // Loading card: anchored so its top edge sits at the screen bottom
+        // when dragOffset == 0, and slides up as the user drags.
+        // Offset formula: top_of_card = ZStack_center + offset - card_height/2 = screen_bottom
+        //   => offset = h/2 + 0.15h = h * 0.65
+        if viewModel.isAtLastLoaded {
+            LoadingCardView()
+                .frame(width: w, height: h * 0.3)
+                .offset(y: h * 0.65 + dragOffset)
         }
     }
 
@@ -111,9 +137,14 @@ struct VideoFeedView: View {
                 guard !isAnimating else { return }
                 let dy = value.translation.height
                 let atStart = viewModel.currentIndex == 0
-                let atEnd = viewModel.currentIndex == viewModel.urls.count - 1
-                if (dy > 0 && atStart) || (dy < 0 && (atEnd || isLocked)) {
+
+                if dy > 0 && atStart {
                     dragOffset = dy * 0.12
+                } else if dy < 0 && isLocked {
+                    dragOffset = dy * 0.12
+                } else if dy < 0 && viewModel.isAtLastLoaded {
+                    // Clamp to 40% so the loading card peeks into view
+                    dragOffset = max(-screenHeight * 0.4, dy)
                 } else {
                     dragOffset = dy
                 }
@@ -127,6 +158,14 @@ struct VideoFeedView: View {
                     if isLocked {
                         withAnimation(.easeInOut(duration: 0.2)) { showLoginPrompt = true }
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { dragOffset = 0 }
+                    } else if viewModel.isAtLastLoaded {
+                        viewModel.fetchMore()
+                        isAnimating = true
+                        withAnimation(.easeOut(duration: 0.2)) { dragOffset = -screenHeight * 0.4 }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { dragOffset = 0 }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { isAnimating = false }
+                        }
                     } else if viewModel.currentIndex < viewModel.urls.count - 1 {
                         viewModel.seekToStart(at: viewModel.currentIndex + 1)
                         isAnimating = true
