@@ -4,15 +4,21 @@ struct VideoFeedView: View {
     @StateObject private var viewModel = VideoFeedViewModel()
     @State private var dragOffset: CGFloat = 0
     @State private var isAnimating = false
+    @State private var isGrayscale = false
+    @State private var showControls = true
 
     var body: some View {
         GeometryReader { geo in
             ZStack {
                 Color.black.ignoresSafeArea()
                 videoStack(geo: geo)
-                muteButton
+                    .grayscale(isGrayscale ? 1.0 : 0.0)
+                muteButton.opacity(showControls ? 1 : 0)
             }
             .gesture(dragGesture(screenHeight: geo.size.height))
+            .onTapGesture {
+                withAnimation(.easeInOut(duration: 0.2)) { showControls.toggle() }
+            }
         }
         .ignoresSafeArea()
         .onAppear { viewModel.playCurrentVideo() }
@@ -49,15 +55,41 @@ struct VideoFeedView: View {
             Spacer()
             HStack {
                 Spacer()
-                Button {
-                    viewModel.isMuted.toggle()
-                } label: {
-                    Image(systemName: viewModel.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
-                        .font(.system(size: 22, weight: .medium))
-                        .foregroundColor(.white)
-                        .padding(14)
-                        .background(.black.opacity(0.55))
-                        .clipShape(Circle())
+                VStack(spacing: 12) {
+                    Button {
+                        // account action
+                    } label: {
+                        Image(systemName: "person.fill")
+                            .font(.system(size: 22, weight: .medium))
+                            .frame(width: 22, height: 22)
+                            .foregroundColor(.white)
+                            .padding(14)
+                            .background(.black.opacity(0.55))
+                            .clipShape(Circle())
+                    }
+
+                    Button {
+                        isGrayscale.toggle()
+                    } label: {
+                        Image(systemName: isGrayscale ? "circle.lefthalf.filled" : "circle.fill")
+                            .font(.system(size: 22, weight: .medium))
+                            .foregroundColor(.white)
+                            .padding(14)
+                            .background(.black.opacity(0.55))
+                            .clipShape(Circle())
+                    }
+
+                    Button {
+                        viewModel.isMuted.toggle()
+                    } label: {
+                        Image(systemName: viewModel.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                            .font(.system(size: 22, weight: .medium))
+                            .frame(width: 22, height: 22)
+                            .foregroundColor(.white)
+                            .padding(14)
+                            .background(.black.opacity(0.55))
+                            .clipShape(Circle())
+                    }
                 }
                 .padding(.trailing, 20)
                 .padding(.bottom, 50)
