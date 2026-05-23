@@ -10,6 +10,7 @@ struct VideoFeedView: View {
     @State private var showControls = true
     @State private var isLoggedIn = false
     @State private var showLoginPrompt = false
+    @State private var showAccountView = false
 
     private var isLocked: Bool { !isLoggedIn && viewModel.currentIndex >= videoLimit - 1 }
 
@@ -32,6 +33,12 @@ struct VideoFeedView: View {
 
                 if showLoginPrompt {
                     LoginOverlayView(isLoggedIn: $isLoggedIn, isPresented: $showLoginPrompt)
+                        .transition(.opacity)
+                        .zIndex(1)
+                }
+
+                if showAccountView {
+                    AccountOverlayView(isLoggedIn: $isLoggedIn, isPresented: $showAccountView)
                         .transition(.opacity)
                         .zIndex(1)
                 }
@@ -90,7 +97,9 @@ struct VideoFeedView: View {
                 Spacer()
                 VStack(spacing: 12) {
                     Button {
-                        withAnimation(.easeInOut(duration: 0.2)) { showLoginPrompt = true }
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            if isLoggedIn { showAccountView = true } else { showLoginPrompt = true }
+                        }
                     } label: {
                         Image(systemName: "person.fill")
                             .font(.system(size: 22, weight: .medium))
