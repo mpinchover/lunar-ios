@@ -47,11 +47,11 @@ struct LoginOverlayView: View {
                         withAnimation(.easeInOut(duration: 0.2)) { isPresented = false }
                     } label: {
                         Image(systemName: "xmark")
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.white)
-                            .padding(10)
-                            .background(Color.white.opacity(0.2))
-                            .clipShape(Circle())
+                            .padding(6)
+                            // .background(Color.white.opacity(0.2))
+                            // .clipShape(Circle())
                     }
                 }
                 .padding(.bottom, 20)
