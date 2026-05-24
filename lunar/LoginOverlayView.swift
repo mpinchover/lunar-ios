@@ -13,6 +13,11 @@ struct LoginOverlayView: View {
     @State private var errorMessage = ""
     @State private var isLoading = false
     @State private var currentNonce: String?
+    @State private var showPasswordEntry = false
+    @State private var isCreatingAccount = false
+
+    private let authControlHeight: CGFloat = 42
+    private let authControlCornerRadius: CGFloat = 10
 
     var body: some View {
         ZStack {
@@ -21,6 +26,22 @@ struct LoginOverlayView: View {
 
             VStack(spacing: 0) {
                 HStack {
+                    if showPasswordEntry {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                showPasswordEntry = false
+                                password = ""
+                                errorMessage = ""
+                            }
+                        } label: {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(10)
+                                .background(Color.white.opacity(0.2))
+                                .clipShape(Circle())
+                        }
+                    }
                     Spacer()
                     Button {
                         withAnimation(.easeInOut(duration: 0.2)) { isPresented = false }
@@ -35,81 +56,15 @@ struct LoginOverlayView: View {
                 }
                 .padding(.bottom, 20)
 
-                Text("Sign in to keep watching")
+                Text(isCreatingAccount ? "Sign up" : "Log in")
                     .font(.title3.bold())
                     .foregroundColor(.white)
                     .padding(.bottom, 28)
 
-                // Apple
-                SignInWithAppleButton(.signIn) { request in
-                    let nonce = randomNonceString()
-                    currentNonce = nonce
-                    request.requestedScopes = [.fullName, .email]
-                    request.nonce = sha256(nonce)
-                } onCompletion: { result in
-                    handleAppleResult(result)
-                }
-                .signInWithAppleButtonStyle(.white)
-                .frame(height: 50)
-                .cornerRadius(25)
-                .padding(.bottom, 12)
-
-                // Google
-                Button { signInWithGoogle() } label: {
-                    HStack(spacing: 10) {
-                        Text("G")
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(Color(red: 0.26, green: 0.52, blue: 0.96))
-                        Text("Sign in with Google")
-                            .font(.system(size: 17, weight: .medium))
-                            .foregroundColor(.black)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                    .background(Color.white)
-                    .cornerRadius(25)
-                }
-                .padding(.bottom, 24)
-
-                // Divider
-                HStack {
-                    Rectangle().fill(Color.white.opacity(0.3)).frame(height: 1)
-                    Text("or").font(.caption).foregroundColor(.white.opacity(0.5)).padding(.horizontal, 10)
-                    Rectangle().fill(Color.white.opacity(0.3)).frame(height: 1)
-                }
-                .padding(.bottom, 20)
-
-                // Email / password
-                VStack(spacing: 10) {
-                    TextField("Email", text: $email)
-                        .textContentType(.emailAddress)
-                        .keyboardType(.emailAddress)
-                        .autocapitalization(.none)
-                        .padding(14)
-                        .background(Color.white.opacity(0.12))
-                        .cornerRadius(12)
-                        .foregroundColor(.white)
-
-                    SecureField("Password", text: $password)
-                        .textContentType(.password)
-                        .padding(14)
-                        .background(Color.white.opacity(0.12))
-                        .cornerRadius(12)
-                        .foregroundColor(.white)
-                }
-                .padding(.bottom, 14)
-
-                if !errorMessage.isEmpty {
-                    Text(errorMessage)
-                        .font(.caption)
-                        .foregroundColor(.red.opacity(0.9))
-                        .multilineTextAlignment(.center)
-                        .padding(.bottom, 10)
-                }
-
-                HStack(spacing: 10) {
-                    authButton("Sign In") { signInWithEmail() }
-                    authButton("Sign Up") { signUpWithEmail() }
+                if showPasswordEntry {
+                    passwordStep
+                } else {
+                    emailStep
                 }
             }
             .padding(28)
@@ -127,15 +82,155 @@ struct LoginOverlayView: View {
         }
     }
 
-    private func authButton(_ label: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(label)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.white)
+    private var emailStep: some View {
+        Group {
+            TextField("Email address", text: $email)
+                .textContentType(.emailAddress)
+                .keyboardType(.emailAddress)
+                .autocapitalization(.none)
+                .padding(.horizontal, 14)
                 .frame(maxWidth: .infinity)
-                .frame(height: 48)
-                .background(Color.white.opacity(0.2))
-                .cornerRadius(24)
+                .frame(height: authControlHeight)
+                .background(Color.white.opacity(0.12))
+                .cornerRadius(authControlCornerRadius)
+                .foregroundColor(.white)
+                .padding(.bottom, 12)
+
+            Button { continueWithEmail() } label: {
+                Text("Continue")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: authControlHeight)
+                    .background(Color.white)
+                    .cornerRadius(authControlCornerRadius)
+            }
+            .padding(.bottom, 24)
+
+            if !errorMessage.isEmpty {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundColor(.red.opacity(0.9))
+                    .multilineTextAlignment(.center)
+                    .padding(.bottom, 10)
+            }
+
+            HStack {
+                Rectangle().fill(Color.white.opacity(0.3)).frame(height: 1)
+                Text("or").font(.caption).foregroundColor(.white.opacity(0.5)).padding(.horizontal, 10)
+                Rectangle().fill(Color.white.opacity(0.3)).frame(height: 1)
+            }
+            .padding(.bottom, 20)
+
+            SignInWithAppleButton(.signIn) { request in
+                let nonce = randomNonceString()
+                currentNonce = nonce
+                request.requestedScopes = [.fullName, .email]
+                request.nonce = sha256(nonce)
+            } onCompletion: { result in
+                handleAppleResult(result)
+            }
+            .signInWithAppleButtonStyle(.white)
+            .frame(height: authControlHeight)
+            .cornerRadius(authControlCornerRadius)
+            .padding(.bottom, 12)
+
+            Button { signInWithGoogle() } label: {
+                HStack(spacing: 10) {
+                    Text("G")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(Color(red: 0.26, green: 0.52, blue: 0.96))
+                    Text("Sign in with Google")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundColor(.black)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: authControlHeight)
+                .background(Color.white)
+                .cornerRadius(authControlCornerRadius)
+            }
+            .padding(.bottom, 24)
+
+            if isCreatingAccount {
+                Button { switchToLogin() } label: {
+                    Text("Log in")
+                        .font(.footnote)
+                        .foregroundColor(.white.opacity(0.7))
+                }
+            } else {
+                Button { switchToSignUp() } label: {
+                    Text("Create an account")
+                        .font(.footnote)
+                        .foregroundColor(.white.opacity(0.7))
+                }
+            }
+        }
+    }
+
+    private var passwordStep: some View {
+        Group {
+            Text(email)
+                .font(.subheadline)
+                .foregroundColor(.white.opacity(0.7))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.bottom, 12)
+
+            SecureField("Password", text: $password)
+                .textContentType(isCreatingAccount ? .newPassword : .password)
+                .padding(.horizontal, 14)
+                .frame(maxWidth: .infinity)
+                .frame(height: authControlHeight)
+                .background(Color.white.opacity(0.12))
+                .cornerRadius(authControlCornerRadius)
+                .foregroundColor(.white)
+                .padding(.bottom, 14)
+
+            if !errorMessage.isEmpty {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundColor(.red.opacity(0.9))
+                    .multilineTextAlignment(.center)
+                    .padding(.bottom, 10)
+            }
+
+            Button {
+                if isCreatingAccount {
+                    signUpWithEmail()
+                } else {
+                    signInWithEmail()
+                }
+            } label: {
+                Text(isCreatingAccount ? "Create account" : "Sign in")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: authControlHeight)
+                    .background(Color.white)
+                    .cornerRadius(authControlCornerRadius)
+            }
+        }
+    }
+
+    private func continueWithEmail() {
+        guard validateEmail() else { return }
+        withAnimation(.easeInOut(duration: 0.2)) {
+            showPasswordEntry = true
+            password = ""
+            errorMessage = ""
+        }
+    }
+
+    private func switchToSignUp() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            isCreatingAccount = true
+            errorMessage = ""
+        }
+    }
+
+    private func switchToLogin() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            isCreatingAccount = false
+            errorMessage = ""
         }
     }
 
@@ -179,7 +274,7 @@ struct LoginOverlayView: View {
     }
 
     private func signInWithEmail() {
-        guard validate() else { return }
+        guard validatePassword() else { return }
         isLoading = true
         Auth.auth().signIn(withEmail: email, password: password) { _, error in
             isLoading = false
@@ -189,7 +284,7 @@ struct LoginOverlayView: View {
     }
 
     private func signUpWithEmail() {
-        guard validate() else { return }
+        guard validatePassword() else { return }
         isLoading = true
         Auth.auth().createUser(withEmail: email, password: password) { _, error in
             isLoading = false
@@ -214,9 +309,24 @@ struct LoginOverlayView: View {
         }
     }
 
-    private func validate() -> Bool {
-        guard !email.isEmpty, !password.isEmpty else {
-            errorMessage = "Please enter your email and password."
+    private func validateEmail() -> Bool {
+        let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            errorMessage = "Please enter your email address."
+            return false
+        }
+        guard trimmed.contains("@"), trimmed.contains(".") else {
+            errorMessage = "Please enter a valid email address."
+            return false
+        }
+        email = trimmed
+        errorMessage = ""
+        return true
+    }
+
+    private func validatePassword() -> Bool {
+        guard !password.isEmpty else {
+            errorMessage = "Please enter your password."
             return false
         }
         errorMessage = ""
@@ -226,8 +336,8 @@ struct LoginOverlayView: View {
     private func friendlyError(_ error: Error) -> String {
         switch AuthErrorCode(rawValue: (error as NSError).code) {
         case .wrongPassword:       return "Incorrect password."
-        case .userNotFound:        return "No account found — tap Sign Up."
-        case .emailAlreadyInUse:   return "Email already registered — tap Sign In."
+        case .userNotFound:        return "No account found — create one below."
+        case .emailAlreadyInUse:   return "Email already registered — sign in instead."
         case .weakPassword:        return "Password must be at least 6 characters."
         case .invalidEmail:        return "Please enter a valid email address."
         default:                   return error.localizedDescription
