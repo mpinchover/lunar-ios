@@ -2,7 +2,6 @@ import SwiftUI
 import AuthenticationServices
 import FirebaseAuth
 import GoogleSignIn
-import CryptoKit
 
 struct LoginOverlayView: View {
     @Binding var isLoggedIn: Bool
@@ -13,7 +12,7 @@ struct LoginOverlayView: View {
     @State private var confirmPassword = ""
     @State private var errorMessage = ""
     @State private var isLoading = false
-    @State private var currentNonce: String?
+    @State private var appleSignInService = AppleSignInService()
     @State private var showPasswordEntry = false
     @State private var isCreatingAccount = false
 
@@ -65,7 +64,6 @@ struct LoginOverlayView: View {
             .background(Color.white.opacity(0.1))
             .cornerRadius(24)
             .padding(.horizontal, 28)
-            .onTapGesture { dismissKeyboard() }
 
             if isLoading {
                 Color.black.opacity(0.3).ignoresSafeArea()
@@ -75,6 +73,7 @@ struct LoginOverlayView: View {
                     .scaleEffect(1.5)
             }
         }
+        .onAppear(perform: configureAppleSignIn)
     }
 
     private var emailStep: some View {
@@ -118,14 +117,17 @@ struct LoginOverlayView: View {
             }
             .padding(.bottom, 20)
 
-            SignInWithAppleButton(.signIn) { request in
-                let nonce = randomNonceString()
-                currentNonce = nonce
-                request.requestedScopes = [.fullName, .email]
-                request.nonce = sha256(nonce)
-            } onCompletion: { result in
-                handleAppleResult(result)
-            }
+            SignInWithAppleButton(
+                isCreatingAccount ? .signUp : .signIn,
+                onRequest: { request in
+                    errorMessage = ""
+                    appleSignInService.configure(request)
+                },
+                onCompletion: { result in
+                    isLoading = true
+                    appleSignInService.handle(result)
+                }
+            )
             .signInWithAppleButtonStyle(.white)
             .frame(height: authControlHeight)
             .cornerRadius(authControlCornerRadius)
@@ -306,22 +308,16 @@ struct LoginOverlayView: View {
 
     // MARK: - Auth
 
-    private func handleAppleResult(_ result: Result<ASAuthorization, Error>) {
-        switch result {
-        case .success(let auth):
-            guard
-                let appleCredential = auth.credential as? ASAuthorizationAppleIDCredential,
-                let nonce = currentNonce,
-                let tokenData = appleCredential.identityToken,
-                let token = String(data: tokenData, encoding: .utf8)
-            else { return }
-            let credential = OAuthProvider.appleCredential(
-                withIDToken: token,
-                rawNonce: nonce,
-                fullName: appleCredential.fullName)
+    private func configureAppleSignIn() {
+        appleSignInService.onCredential = { credential in
             signIn(with: credential)
-        case .failure(let error):
-            errorMessage = friendlyError(error)
+        }
+        appleSignInService.onFailure = { message in
+            isLoading = false
+            errorMessage = message
+        }
+        appleSignInService.onCancel = {
+            isLoading = false
         }
     }
 
@@ -431,23 +427,10 @@ struct LoginOverlayView: View {
         case .emailAlreadyInUse:   return "Email already registered — sign in instead."
         case .weakPassword:        return "Password must be at least 6 characters."
         case .invalidEmail:        return "Please enter a valid email address."
+        case .operationNotAllowed: return "Apple sign-in is not enabled for this app."
+        case .invalidCredential:   return "Apple sign-in failed. Please try again."
         default:                   return error.localizedDescription
         }
-    }
-
-    // MARK: - Nonce (required for Apple + Firebase)
-
-    private func randomNonceString(length: Int = 32) -> String {
-        var bytes = [UInt8](repeating: 0, count: length)
-        _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
-        let charset = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
-        return String(bytes.map { charset[Int($0) % charset.count] })
-    }
-
-    private func sha256(_ input: String) -> String {
-        SHA256.hash(data: Data(input.utf8))
-            .compactMap { String(format: "%02x", $0) }
-            .joined()
     }
 }
 

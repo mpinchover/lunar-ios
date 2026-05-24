@@ -1,4 +1,5 @@
 import SwiftUI
+import FirebaseAuth
 
 private let videoLimit = 20
 
@@ -10,11 +11,41 @@ struct VideoFeedView: View {
     @State private var showControls = true
     @State private var isLoggedIn = false
     @State private var showLoginPrompt = false
-    @State private var showAccountView = false
+    @State private var showAccountScreen = false
+    @State private var authListener: AuthStateDidChangeListenerHandle?
 
     private var isLocked: Bool { !isLoggedIn && viewModel.currentIndex >= videoLimit - 1 }
 
     var body: some View {
+        NavigationStack {
+            feedContent
+                .toolbar(.hidden, for: .navigationBar)
+                .navigationDestination(isPresented: $showAccountScreen) {
+                    AccountView(isLoggedIn: $isLoggedIn)
+                }
+        }
+        .onAppear {
+            viewModel.playCurrentVideo()
+            isLoggedIn = Auth.auth().currentUser != nil
+            authListener = Auth.auth().addStateDidChangeListener { _, user in
+                isLoggedIn = user != nil
+            }
+        }
+        .onDisappear {
+            if let authListener {
+                Auth.auth().removeStateDidChangeListener(authListener)
+            }
+        }
+        .onChange(of: viewModel.isLoadingMore) { _, isLoading in
+            // If new videos arrive while the loading card is visible, snap back
+            // immediately so the freshly added next video doesn't peek into frame.
+            guard !isLoading, dragOffset < 0, isAnimating else { return }
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { dragOffset = 0 }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { isAnimating = false }
+        }
+    }
+
+    private var feedContent: some View {
         GeometryReader { geo in
             ZStack {
                 Color.black.ignoresSafeArea()
@@ -27,6 +58,9 @@ struct VideoFeedView: View {
                 } else {
                     videoStack(geo: geo)
                         .grayscale(isGrayscale ? 1.0 : 0.0)
+                        .onTapGesture {
+                            withAnimation(.easeInOut(duration: 0.2)) { showControls.toggle() }
+                        }
                 }
 
                 controls.opacity(showControls ? 1 : 0)
@@ -36,29 +70,11 @@ struct VideoFeedView: View {
                         .transition(.opacity)
                         .zIndex(1)
                 }
-
-                if showAccountView {
-                    AccountOverlayView(isLoggedIn: $isLoggedIn, isPresented: $showAccountView)
-                        .transition(.opacity)
-                        .zIndex(1)
-                }
             }
-            .gesture(dragGesture(screenHeight: geo.size.height))
-            .onTapGesture {
-                guard !showLoginPrompt else { return }
-                withAnimation(.easeInOut(duration: 0.2)) { showControls.toggle() }
-            }
+            .gesture(showLoginPrompt ? nil : dragGesture(screenHeight: geo.size.height))
         }
         .ignoresSafeArea()
         .statusBarHidden(true)
-        .onAppear { viewModel.playCurrentVideo() }
-        .onChange(of: viewModel.isLoadingMore) { _, isLoading in
-            // If new videos arrive while the loading card is visible, snap back
-            // immediately so the freshly added next video doesn't peek into frame.
-            guard !isLoading, dragOffset < 0, isAnimating else { return }
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { dragOffset = 0 }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { isAnimating = false }
-        }
     }
 
     @ViewBuilder
@@ -98,7 +114,7 @@ struct VideoFeedView: View {
                 VStack(spacing: 12) {
                     Button {
                         withAnimation(.easeInOut(duration: 0.2)) {
-                            if isLoggedIn { showAccountView = true } else { showLoginPrompt = true }
+                            if isLoggedIn { showAccountScreen = true } else { showLoginPrompt = true }
                         }
                     } label: {
                         Image(systemName: "person.fill")
