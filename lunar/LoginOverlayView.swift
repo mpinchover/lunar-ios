@@ -23,6 +23,7 @@ struct LoginOverlayView: View {
         ZStack {
             Color.black.opacity(0.8)
                 .ignoresSafeArea()
+                .onTapGesture { dismissKeyboard() }
 
             VStack(spacing: 0) {
                 HStack {
@@ -70,6 +71,7 @@ struct LoginOverlayView: View {
             .background(Color.white.opacity(0.1))
             .cornerRadius(24)
             .padding(.horizontal, 28)
+            .onTapGesture { dismissKeyboard() }
 
             if isLoading {
                 Color.black.opacity(0.3).ignoresSafeArea()
@@ -202,6 +204,15 @@ struct LoginOverlayView: View {
                     .cornerRadius(authControlCornerRadius)
             }
         }
+    }
+
+    private func dismissKeyboard() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
     }
 
     private func continueWithEmail() {
