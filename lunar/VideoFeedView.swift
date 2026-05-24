@@ -161,7 +161,7 @@ struct VideoFeedView: View {
             .onEnded { value in
                 guard !isAnimating else { return }
                 let dy = value.translation.height
-                let threshold = screenHeight / 5
+                let threshold = screenHeight / 7
 
                 if dy < -threshold {
                     if isLocked {
