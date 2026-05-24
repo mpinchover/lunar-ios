@@ -10,6 +10,7 @@ struct LoginOverlayView: View {
 
     @State private var email = ""
     @State private var password = ""
+    @State private var confirmPassword = ""
     @State private var errorMessage = ""
     @State private var isLoading = false
     @State private var currentNonce: String?
@@ -27,22 +28,6 @@ struct LoginOverlayView: View {
 
             VStack(spacing: 0) {
                 HStack {
-                    if showPasswordEntry {
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                showPasswordEntry = false
-                                password = ""
-                                errorMessage = ""
-                            }
-                        } label: {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundColor(.white)
-                                .padding(10)
-                                .background(Color.white.opacity(0.2))
-                                .clipShape(Circle())
-                        }
-                    }
                     Spacer()
                     Button {
                         withAnimation(.easeInOut(duration: 0.2)) { isPresented = false }
@@ -51,7 +36,6 @@ struct LoginOverlayView: View {
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.white)
                             .padding(6)
-    
                     }
                 }
                 .padding(.bottom, 20)
@@ -61,11 +45,21 @@ struct LoginOverlayView: View {
                     .foregroundColor(.white)
                     .padding(.bottom, 28)
 
-                if showPasswordEntry {
-                    passwordStep
-                } else {
-                    emailStep
+                Group {
+                    if showPasswordEntry {
+                        if isCreatingAccount {
+                            signUpPasswordStep
+                        } else {
+                            loginPasswordStep
+                        }
+                    } else {
+                        emailStep
+                    }
                 }
+                .transition(.asymmetric(
+                    insertion: .move(edge: .trailing).combined(with: .opacity),
+                    removal: .move(edge: .leading).combined(with: .opacity)
+                ))
             }
             .padding(28)
             .background(Color.white.opacity(0.1))
@@ -98,6 +92,14 @@ struct LoginOverlayView: View {
                 .cornerRadius(authControlCornerRadius)
                 .padding(.bottom, 12)
 
+            if !errorMessage.isEmpty {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundColor(.red.opacity(0.9))
+                    .multilineTextAlignment(.center)
+                    .padding(.bottom, 10)
+            }
+
             Button { continueWithEmail() } label: {
                 Text("Continue")
                     .font(.system(size: 17, weight: .semibold))
@@ -108,7 +110,6 @@ struct LoginOverlayView: View {
                     .cornerRadius(authControlCornerRadius)
             }
             .padding(.bottom, 24)
-
 
             HStack {
                 Rectangle().fill(Color.white.opacity(0.3)).frame(height: 1)
@@ -162,7 +163,7 @@ struct LoginOverlayView: View {
         }
     }
 
-    private var passwordStep: some View {
+    private var loginPasswordStep: some View {
         Group {
             Text(verbatim: email)
                 .font(.subheadline)
@@ -170,32 +171,15 @@ struct LoginOverlayView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.bottom, 12)
 
-            SecureField("Password", text: $password)
-                .textContentType(isCreatingAccount ? .newPassword : .password)
-                .padding(.horizontal, 14)
-                .frame(maxWidth: .infinity)
-                .frame(height: authControlHeight)
-                .background(Color.white.opacity(0.12))
-                .cornerRadius(authControlCornerRadius)
-                .foregroundColor(.white)
+            passwordField(placeholder: "password", text: $password, contentType: .password)
                 .padding(.bottom, 14)
 
             if !errorMessage.isEmpty {
-                Text(errorMessage)
-                    .font(.caption)
-                    .foregroundColor(.red.opacity(0.9))
-                    .multilineTextAlignment(.center)
-                    .padding(.bottom, 10)
+                authErrorMessage
             }
 
-            Button {
-                if isCreatingAccount {
-                    signUpWithEmail()
-                } else {
-                    signInWithEmail()
-                }
-            } label: {
-                Text(isCreatingAccount ? "Create account" : "Sign in")
+            Button { signInWithEmail() } label: {
+                Text("Submit")
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(.black)
                     .frame(maxWidth: .infinity)
@@ -203,7 +187,77 @@ struct LoginOverlayView: View {
                     .background(Color.white)
                     .cornerRadius(authControlCornerRadius)
             }
+            .padding(.bottom, 24)
+
+            passwordBackButton
         }
+    }
+
+    private var signUpPasswordStep: some View {
+        Group {
+            Text(verbatim: email)
+                .font(.subheadline)
+                .foregroundColor(.white.opacity(0.7))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.bottom, 12)
+
+            passwordField(placeholder: "password", text: $password, contentType: .newPassword)
+                .padding(.bottom, 12)
+
+            passwordField(placeholder: "confirm password", text: $confirmPassword, contentType: .newPassword)
+                .padding(.bottom, 14)
+
+            if !errorMessage.isEmpty {
+                authErrorMessage
+            }
+
+            Button { signUpWithEmail() } label: {
+                Text("Create account")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: authControlHeight)
+                    .background(Color.white)
+                    .cornerRadius(authControlCornerRadius)
+            }
+            .padding(.bottom, 24)
+
+            passwordBackButton
+        }
+    }
+
+    private var passwordBackButton: some View {
+        Button { goBackFromPassword() } label: {
+            Text("Back")
+                .font(.footnote)
+                .foregroundColor(.white.opacity(0.7))
+        }
+    }
+
+    private var authErrorMessage: some View {
+        Text(errorMessage)
+            .font(.caption)
+            .foregroundColor(.red.opacity(0.9))
+            .multilineTextAlignment(.center)
+            .padding(.bottom, 10)
+    }
+
+    private func passwordField(
+        placeholder: String,
+        text: Binding<String>,
+        contentType: UITextContentType
+    ) -> some View {
+        AuthTextField(
+            text: text,
+            placeholder: placeholder,
+            textContentType: contentType,
+            isSecure: true
+        )
+        .padding(.horizontal, 14)
+        .frame(maxWidth: .infinity)
+        .frame(height: authControlHeight)
+        .background(Color.white.opacity(0.12))
+        .cornerRadius(authControlCornerRadius)
     }
 
     private func dismissKeyboard() {
@@ -217,9 +271,21 @@ struct LoginOverlayView: View {
 
     private func continueWithEmail() {
         guard validateEmail() else { return }
+        dismissKeyboard()
         withAnimation(.easeInOut(duration: 0.2)) {
             showPasswordEntry = true
             password = ""
+            confirmPassword = ""
+            errorMessage = ""
+        }
+    }
+
+    private func goBackFromPassword() {
+        dismissKeyboard()
+        withAnimation(.easeInOut(duration: 0.2)) {
+            showPasswordEntry = false
+            password = ""
+            confirmPassword = ""
             errorMessage = ""
         }
     }
@@ -288,7 +354,7 @@ struct LoginOverlayView: View {
     }
 
     private func signUpWithEmail() {
-        guard validatePassword() else { return }
+        guard validateSignUpPasswords() else { return }
         isLoading = true
         Auth.auth().createUser(withEmail: email, password: password) { _, error in
             isLoading = false
@@ -337,6 +403,27 @@ struct LoginOverlayView: View {
         return true
     }
 
+    private func validateSignUpPasswords() -> Bool {
+        guard !password.isEmpty else {
+            errorMessage = "Please enter a password."
+            return false
+        }
+        guard password.count >= 6 else {
+            errorMessage = "Password must be at least 6 characters."
+            return false
+        }
+        guard !confirmPassword.isEmpty else {
+            errorMessage = "Please confirm your password."
+            return false
+        }
+        guard password == confirmPassword else {
+            errorMessage = "Passwords do not match."
+            return false
+        }
+        errorMessage = ""
+        return true
+    }
+
     private func friendlyError(_ error: Error) -> String {
         switch AuthErrorCode(rawValue: (error as NSError).code) {
         case .wrongPassword:       return "Incorrect password."
@@ -369,6 +456,7 @@ private struct AuthTextField: UIViewRepresentable {
     let placeholder: String
     var keyboardType: UIKeyboardType = .default
     var textContentType: UITextContentType?
+    var isSecure: Bool = false
 
     func makeUIView(context: Context) -> UITextField {
         let field = UITextField()
@@ -379,6 +467,7 @@ private struct AuthTextField: UIViewRepresentable {
         field.font = .systemFont(ofSize: 17)
         field.keyboardType = keyboardType
         field.textContentType = textContentType
+        field.isSecureTextEntry = isSecure
         field.autocorrectionType = .no
         field.autocapitalizationType = .none
         field.spellCheckingType = .no
