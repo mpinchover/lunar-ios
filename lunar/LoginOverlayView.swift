@@ -50,8 +50,7 @@ struct LoginOverlayView: View {
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.white)
                             .padding(6)
-                            // .background(Color.white.opacity(0.2))
-                            // .clipShape(Circle())
+    
                     }
                 }
                 .padding(.bottom, 20)
@@ -84,16 +83,17 @@ struct LoginOverlayView: View {
 
     private var emailStep: some View {
         Group {
-            TextField("Email address", text: $email)
-                .textContentType(.emailAddress)
-                .keyboardType(.emailAddress)
-                .autocapitalization(.none)
+            AuthTextField(
+                text: $email,
+                placeholder: "email@example.com",
+                keyboardType: .emailAddress,
+                textContentType: .emailAddress
+            )
                 .padding(.horizontal, 14)
                 .frame(maxWidth: .infinity)
                 .frame(height: authControlHeight)
                 .background(Color.white.opacity(0.12))
                 .cornerRadius(authControlCornerRadius)
-                .foregroundColor(.white)
                 .padding(.bottom, 12)
 
             Button { continueWithEmail() } label: {
@@ -107,13 +107,6 @@ struct LoginOverlayView: View {
             }
             .padding(.bottom, 24)
 
-            // if !errorMessage.isEmpty {
-            //     Text(errorMessage)
-            //         .font(.caption)
-            //         .foregroundColor(.red.opacity(0.9))
-            //         .multilineTextAlignment(.center)
-            //         .padding(.bottom, 10)
-            // }
 
             HStack {
                 Rectangle().fill(Color.white.opacity(0.3)).frame(height: 1)
@@ -153,7 +146,7 @@ struct LoginOverlayView: View {
 
             if isCreatingAccount {
                 Button { switchToLogin() } label: {
-                    Text("Log in")
+                    Text("Already have an account")
                         .font(.footnote)
                         .foregroundColor(.white.opacity(0.7))
                 }
@@ -169,7 +162,7 @@ struct LoginOverlayView: View {
 
     private var passwordStep: some View {
         Group {
-            Text(email)
+            Text(verbatim: email)
                 .font(.subheadline)
                 .foregroundColor(.white.opacity(0.7))
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -357,5 +350,55 @@ struct LoginOverlayView: View {
         SHA256.hash(data: Data(input.utf8))
             .compactMap { String(format: "%02x", $0) }
             .joined()
+    }
+}
+
+private struct AuthTextField: UIViewRepresentable {
+    @Binding var text: String
+    let placeholder: String
+    var keyboardType: UIKeyboardType = .default
+    var textContentType: UITextContentType?
+
+    func makeUIView(context: Context) -> UITextField {
+        let field = UITextField()
+        field.delegate = context.coordinator
+        field.text = text
+        field.textColor = .white
+        field.tintColor = .white
+        field.font = .systemFont(ofSize: 17)
+        field.keyboardType = keyboardType
+        field.textContentType = textContentType
+        field.autocorrectionType = .no
+        field.autocapitalizationType = .none
+        field.spellCheckingType = .no
+        field.borderStyle = .none
+        field.attributedPlaceholder = NSAttributedString(
+            string: placeholder,
+            attributes: [.foregroundColor: UIColor.white.withAlphaComponent(0.45)]
+        )
+        field.addTarget(context.coordinator, action: #selector(Coordinator.textDidChange), for: .editingChanged)
+        return field
+    }
+
+    func updateUIView(_ uiView: UITextField, context: Context) {
+        if uiView.text != text {
+            uiView.text = text
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    final class Coordinator: NSObject, UITextFieldDelegate {
+        var parent: AuthTextField
+
+        init(_ parent: AuthTextField) {
+            self.parent = parent
+        }
+
+        @objc func textDidChange(_ textField: UITextField) {
+            parent.text = textField.text ?? ""
+        }
     }
 }
