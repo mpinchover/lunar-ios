@@ -13,7 +13,12 @@ private struct VideoItem: Decodable {
 
 class VideoFeedViewModel: ObservableObject {
     @Published private(set) var currentIndex: Int = 0
-    @Published var isMuted: Bool = true { didSet { updateAudio(for: currentIndex) } }
+    @Published var isMuted: Bool = true {
+        didSet {
+            configureAudioSession()
+            updateAudio(for: currentIndex)
+        }
+    }
     @Published private(set) var isLoadingMore: Bool = false
 
     private static let videosEndpoint = "https://lunar-server-286518526012.us-central1.run.app/videos"
@@ -31,6 +36,7 @@ class VideoFeedViewModel: ObservableObject {
     }
 
     init() {
+        configureAudioSession()
         fetchMore()
     }
 
@@ -115,6 +121,20 @@ class VideoFeedViewModel: ObservableObject {
     private func updateAudio(for center: Int) {
         for (i, item) in playerItems {
             item.player.isMuted = (i == center) ? isMuted : true
+        }
+    }
+
+    private func configureAudioSession() {
+        let session = AVAudioSession.sharedInstance()
+        do {
+            if isMuted {
+                try session.setCategory(.ambient, mode: .default)
+            } else {
+                try session.setCategory(.playback, mode: .default)
+            }
+            try session.setActive(true)
+        } catch {
+            // If session setup fails, player mute state still applies in-app.
         }
     }
 
