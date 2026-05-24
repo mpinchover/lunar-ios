@@ -1,5 +1,6 @@
 import Foundation
 import AVFoundation
+import FirebaseAuth
 
 private struct VideoFeedResponse: Decodable {
     let count: Int
@@ -33,6 +34,11 @@ class VideoFeedViewModel: ObservableObject {
     // True when the user is on the last buffered video and the server may have more
     var isAtLastLoaded: Bool {
         hasMore && !urls.isEmpty && currentIndex >= urls.count - 1
+    }
+
+    /// Last local video with no further server pages (guest / end of catalog).
+    var isAtEndOfFeed: Bool {
+        !urls.isEmpty && currentIndex >= urls.count - 1 && !hasMore
     }
 
     init() {
@@ -91,12 +97,37 @@ class VideoFeedViewModel: ObservableObject {
         return components?.url
     }
 
+    private func videosURLRequest(initial: Bool) async throws -> URLRequest? {
+        guard let url = videosRequestURL(initial: initial) else { return nil }
+        var request = URLRequest(url: url)
+        if let user = Auth.auth().currentUser {
+            let token = try await user.getIDToken()
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        return request
+    }
+
+    /// Clears feed state and refetches from the server (e.g. after sign-in with auth).
+    @MainActor
+    func reload() {
+        urls = []
+        lastServerIndex = nil
+        hasMore = true
+        currentIndex = 0
+        isLoadingMore = false
+        for (_, item) in playerItems {
+            item.player.pause()
+        }
+        playerItems = [:]
+        fetchMore()
+    }
+
     @MainActor
     private func loadVideos(initial: Bool) async {
         defer { isLoadingMore = false }
-        guard let requestURL = videosRequestURL(initial: initial) else { return }
         do {
-            let (data, _) = try await URLSession.shared.data(from: requestURL)
+            guard let request = try await videosURLRequest(initial: initial) else { return }
+            let (data, _) = try await URLSession.shared.data(for: request)
             let response = try JSONDecoder().decode(VideoFeedResponse.self, from: data)
             if response.videos.isEmpty {
                 hasMore = false
@@ -111,6 +142,9 @@ class VideoFeedViewModel: ObservableObject {
             }
             if let maxIndex {
                 lastServerIndex = maxIndex
+            }
+            if Auth.auth().currentUser == nil {
+                hasMore = false
             }
             updateWindow(for: currentIndex)
         } catch {

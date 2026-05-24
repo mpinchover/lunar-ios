@@ -1,8 +1,6 @@
 import SwiftUI
 import FirebaseAuth
 
-private let videoLimit = 20
-
 struct VideoFeedView: View {
     @StateObject private var viewModel = VideoFeedViewModel()
     @State private var dragOffset: CGFloat = 0
@@ -14,7 +12,7 @@ struct VideoFeedView: View {
     @State private var showAccountScreen = false
     @State private var authListener: AuthStateDidChangeListenerHandle?
 
-    private var isLocked: Bool { !isLoggedIn && viewModel.currentIndex >= videoLimit - 1 }
+    private var isLocked: Bool { !isLoggedIn && viewModel.isAtEndOfFeed }
 
     var body: some View {
         NavigationStack {
@@ -30,6 +28,13 @@ struct VideoFeedView: View {
             authListener = Auth.auth().addStateDidChangeListener { _, user in
                 isLoggedIn = user != nil
             }
+        }
+        .onChange(of: isLoggedIn) { wasLoggedIn, loggedIn in
+            guard loggedIn != wasLoggedIn else { return }
+            showLoginPrompt = false
+            dragOffset = 0
+            isAnimating = false
+            viewModel.reload()
         }
         .onDisappear {
             if let authListener {
@@ -99,7 +104,7 @@ struct VideoFeedView: View {
         // when dragOffset == 0, and slides up as the user drags.
         // Offset formula: top_of_card = ZStack_center + offset - card_height/2 = screen_bottom
         //   => offset = h/2 + 0.15h = h * 0.65
-        if viewModel.isAtLastLoaded {
+        if viewModel.isAtLastLoaded || (!isLoggedIn && viewModel.isAtEndOfFeed) {
             LoadingCardView()
                 .frame(width: w, height: h * 0.3)
                 .offset(y: h * 0.65 + dragOffset)
@@ -167,7 +172,7 @@ struct VideoFeedView: View {
                     dragOffset = dy * 0.12
                 } else if dy < 0 && isLocked {
                     dragOffset = dy * 0.12
-                } else if dy < 0 && viewModel.isAtLastLoaded {
+                } else if dy < 0 && (viewModel.isAtLastLoaded || (!isLoggedIn && viewModel.isAtEndOfFeed)) {
                     // Clamp to 40% so the loading card peeks into view
                     dragOffset = max(-screenHeight * 0.4, dy)
                 } else {
