@@ -107,13 +107,13 @@ struct LoginOverlayView: View {
             }
             .padding(.bottom, 24)
 
-            if !errorMessage.isEmpty {
-                Text(errorMessage)
-                    .font(.caption)
-                    .foregroundColor(.red.opacity(0.9))
-                    .multilineTextAlignment(.center)
-                    .padding(.bottom, 10)
-            }
+            // if !errorMessage.isEmpty {
+            //     Text(errorMessage)
+            //         .font(.caption)
+            //         .foregroundColor(.red.opacity(0.9))
+            //         .multilineTextAlignment(.center)
+            //         .padding(.bottom, 10)
+            // }
 
             HStack {
                 Rectangle().fill(Color.white.opacity(0.3)).frame(height: 1)
