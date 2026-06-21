@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		FBA01BE02FE8871E00E1F6C3 /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = FBA01BDF2FE8871E00E1F6C3 /* Launch Screen.storyboard */; };
 		FBDBEC322F9EE6CD00D1AEC5 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = FBDBEC312F9EE6CD00D1AEC5 /* FirebaseAuth */; };
 		FBDBEC342F9EE6CD00D1AEC5 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = FBDBEC332F9EE6CD00D1AEC5 /* FirebaseCore */; };
 		FBDBEC372F9F3BA600D1AEC5 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = FBDBEC362F9F3BA600D1AEC5 /* GoogleSignIn */; };
@@ -30,6 +31,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		FBA01BDF2FE8871E00E1F6C3 /* Launch Screen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
 		FBDBEBEB2F9E96F200D1AEC5 /* lunar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = lunar.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FBDBEBF82F9E96F300D1AEC5 /* lunarTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = lunarTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FBDBEC022F9E96F300D1AEC5 /* lunarUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = lunarUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -97,6 +99,7 @@
 		FBDBEBE22F9E96F200D1AEC5 = {
 			isa = PBXGroup;
 			children = (
+				FBA01BDF2FE8871E00E1F6C3 /* Launch Screen.storyboard */,
 				FBDBEBED2F9E96F200D1AEC5 /* lunar */,
 				FBDBEBFB2F9E96F300D1AEC5 /* lunarTests */,
 				FBDBEC052F9E96F300D1AEC5 /* lunarUITests */,
@@ -241,6 +244,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FBA01BE02FE8871E00E1F6C3 /* Launch Screen.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
