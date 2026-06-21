@@ -184,7 +184,12 @@ class VideoFeedViewModel: ObservableObject {
         }
 
         for i in needed where playerItems[i] == nil {
-            let templateItem = AVPlayerItem(url: urls[i])
+            let asset = AVURLAsset(url: urls[i])
+            // Kick off network/metadata loading before the player needs it
+            asset.loadValuesAsynchronously(forKeys: ["playable", "tracks"]) { }
+            let templateItem = AVPlayerItem(asset: asset)
+            // Start playback after 2 s buffered instead of AVFoundation's large default
+            templateItem.preferredForwardBufferDuration = 2.0
             let queuePlayer = AVQueuePlayer()
             queuePlayer.isMuted = true
             let looper = AVPlayerLooper(player: queuePlayer, templateItem: templateItem)
