@@ -427,8 +427,8 @@ struct LoginOverlayView: View {
         case .emailAlreadyInUse:   return "Email already registered — sign in instead."
         case .weakPassword:        return "Password must be at least 6 characters."
         case .invalidEmail:        return "Please enter a valid email address."
-        case .operationNotAllowed: return "Apple sign-in is not enabled for this app."
-        case .invalidCredential:   return "Apple sign-in failed. Please try again."
+        case .operationNotAllowed: return "This sign-in method is not enabled for this app."
+        case .invalidCredential:   return "Invalid email or password."
         default:                   return error.localizedDescription
         }
     }

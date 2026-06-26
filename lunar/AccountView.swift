@@ -11,8 +11,9 @@ struct AccountView: View {
 
     private var email: String {
         guard let user = Auth.auth().currentUser else { return "No email" }
-        if let email = user.email, !email.isEmpty { return email }
-        return user.providerData.compactMap(\.email).first ?? "No email"
+        let raw = user.email ?? user.providerData.compactMap(\.email).first ?? ""
+        if raw.hasSuffix("@privaterelay.appleid.com") { return "Apple ID (private email)" }
+        return raw.isEmpty ? "No email" : raw
     }
 
     var body: some View {
