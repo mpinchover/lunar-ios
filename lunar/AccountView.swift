@@ -4,6 +4,7 @@ import FirebaseAuth
 struct AccountView: View {
     @Binding var isLoggedIn: Bool
     @Environment(\.dismiss) private var dismiss
+    @State private var showDeleteConfirmation = false
 
     private let fieldHeight: CGFloat = 42
     private let fieldCornerRadius: CGFloat = 10
@@ -50,7 +51,25 @@ struct AccountView: View {
                         .cornerRadius(24)
                 }
                 .padding(.horizontal, 28)
+                .padding(.bottom, 12)
+
+                Button { showDeleteConfirmation = true } label: {
+                    Text("Delete Account")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.red.opacity(0.7))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 48)
+                        .background(Color.white.opacity(0.08))
+                        .cornerRadius(24)
+                }
+                .padding(.horizontal, 28)
                 .padding(.bottom, 50)
+                .alert("Delete Account", isPresented: $showDeleteConfirmation) {
+                    Button("Delete", role: .destructive) { deleteAccount() }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("Are you sure you want to delete your account? This action cannot be undone.")
+                }
             }
         }
         .navigationTitle("Account")
@@ -67,5 +86,13 @@ struct AccountView: View {
         try? Auth.auth().signOut()
         isLoggedIn = false
         dismiss()
+    }
+
+    private func deleteAccount() {
+        Auth.auth().currentUser?.delete { error in
+            guard error == nil else { return }
+            isLoggedIn = false
+            dismiss()
+        }
     }
 }
